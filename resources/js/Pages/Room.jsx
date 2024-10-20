@@ -4,7 +4,7 @@ import { Peer } from "https://esm.sh/peerjs@1.5.4?bundle-deps"
 import '../echo';
 
 export default function Room({ roomId }) {
-    const myId = useRef(null);
+    const myId = useRef(null); // To pass as the argument when manually closing a connection
     const videoGrid = useRef(null);
     const localVideoDom = useRef(null);
     const myPeer = useRef(new Peer(undefined, {
