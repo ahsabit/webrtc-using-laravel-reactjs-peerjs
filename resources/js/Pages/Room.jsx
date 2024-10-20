@@ -6,6 +6,7 @@ import '../echo';
 export default function Room({ roomId }) {
     const myId = useRef(null);
     const videoGrid = useRef(null);
+    const localVideoDom = useRef(null);
     const myPeer = useRef(new Peer(undefined, {
         host: '/',
         port: '3001',
@@ -16,19 +17,7 @@ export default function Room({ roomId }) {
         myVideo.muted = true;
         navigator.mediaDevices.getUserMedia({video: true, audio: true})
             .then((stream) => {
-                addVideoStream(myVideo, stream);
-
-                myPeer.current.on('open', (id) => {
-                    myId.current = id;
-                    axios.post('/join-room', {
-                        roomId: roomId,
-                        userId: id
-                    }).then((res) => {
-                        console.log(res['data']);
-                    }).catch((err) => {
-                        throw new Error(err);
-                    });
-                });
+                localVideoDom.current.srcObject = stream;
 
                 myPeer.current.on('call', call => {
                     call.answer(stream);
@@ -36,22 +25,35 @@ export default function Room({ roomId }) {
                     call.on('stream', userVideoStream => {
                         addVideoStream(video, userVideoStream);
                     });
+                    call.on('close', () => {
+                        video.remove();
+                    });
                 });
 
                 window.Echo.private(`room.${roomId}`)
                     .listen('NewUserConnected', (e) => {
                         connectToNewUser(e.userId, stream);
-                        console.log('it came');
+                        console.log('nwe user came');
+                    })
+                    .listen('UserRemoved', (e) => {
+                        if (peers.current[e.userId]) {
+                            peers.current[e.userId].close();
+                            console.log(e)
+                        }
                     });
             });
 
-        window.Echo.private(`room.${roomId}`)
-            .listen('UserRemoved', (e) => {
-                if (peers.current[e.userId]) {
-                    peers.current[e.userId].close();
-                    console.log(e)
-                }
+        myPeer.current.on('open', (id) => {
+            myId.current = id;
+            axios.post('/join-room', {
+                roomId: roomId,
+                userId: id
+            }).then((res) => {
+                console.log(res['data']);
+            }).catch((err) => {
+                throw new Error(err);
             });
+        });
     }, []);
 
     const connectToNewUser = (userId, stream) => {
@@ -88,8 +90,10 @@ export default function Room({ roomId }) {
 
     return (
         <>
-            <div ref={videoGrid}></div>
-            <button onClick={(myId) => hangup(myId.current)}>Close</button>
+            <div ref={videoGrid}>
+                <video ref={localVideoDom} autoPlay playsInline></video>
+            </div>
+            <button onClick={() => hangup(myId.current)}>Close</button>
         </>
     );
 }

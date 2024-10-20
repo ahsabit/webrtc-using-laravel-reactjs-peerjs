@@ -14,7 +14,7 @@ Route::get('/rooms/{room}', function ($room) {
     return Inertia::render('Room', [
         'roomId' => $room
     ]);
-})->middleware('auth');
+})->middleware('auth')->name('rooms.show');
 
 Route::post('/join-room', function (Request $request) {
     try {
@@ -55,7 +55,7 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::get('/rooms', function () {
-    return redirect(`/rooms/` . Str::uuid());
+    return redirect()->route('rooms.show', ['room' => Str::uuid()]);
 })->middleware('auth');
 
 require __DIR__.'/auth.php';
